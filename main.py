@@ -27,7 +27,7 @@ def get_user_want_to_watch_movies_from_webpage(username):
         soup = BeautifulSoup(html, 'html.parser')
         movie_elements = soup.find_all('a', class_='poster js_item')
         movies = []
-
+        seen_movies = set()
         for movie_element in movie_elements:
             title_element = movie_element.find('div', class_='poster__title')
             poster_art_element = movie_element.find('div', class_='poster__art')
@@ -36,7 +36,10 @@ def get_user_want_to_watch_movies_from_webpage(username):
                 title = title_element.text.strip()
                 style = poster_art_element['style']
                 poster_url = style.split('url("')[1].split('");')[0]
-                movies.append({'title': title, 'poster_url': poster_url})
+                movie_id = f"{title}_{poster_url}"
+                if movie_id not in seen_movies:
+                    movies.append({'title': title, 'poster_url': poster_url})
+                seen_movies.add(movie_id)
         return movies
 
     except requests.exceptions.RequestException as e:
