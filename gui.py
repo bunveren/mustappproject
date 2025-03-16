@@ -28,18 +28,25 @@ def get_user_want_to_watch_movies_from_webpage(username):
         chrome_options.add_argument("--headless")
         driver = webdriver.Chrome(options=chrome_options)
         driver.get(url)
+
         last_height = driver.execute_script("return document.body.scrollHeight")
-        while True:
+        scroll_count = 0  # Limit scroll attempts
+        max_scrolls = 10  # Adjust this as needed
+        while scroll_count < max_scrolls: # Limit scroll attempts
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(1)  # Wait for content to load (adjust time if needed)
             new_height = driver.execute_script("return document.body.scrollHeight")
+            print(f"Scroll attempt {scroll_count+1}: Last Height = {last_height}, New Height = {new_height}") # Debug print
             if new_height == last_height:
-                break
+                break  # Potentially break too early, might need to remove this or adjust
             last_height = new_height
+            scroll_count += 1
 
         html = driver.page_source
         driver.quit()
         soup = BeautifulSoup(html, 'html.parser')
         movie_elements = soup.find_all('a', class_='poster js_item')
+        print(f"Number of movie_elements found by BeautifulSoup: {len(movie_elements)}") # Debug print
         movies = []
         seen_movies = set()
         for movie_element in movie_elements:
@@ -54,6 +61,7 @@ def get_user_want_to_watch_movies_from_webpage(username):
                 if movie_id not in seen_movies:
                     movies.append({'title': title, 'poster_url': poster_url})
                 seen_movies.add(movie_id)
+        print(f"Number of movies after deduplication: {len(movies)}") # Debug print
         return movies
 
     except requests.exceptions.RequestException as e:
