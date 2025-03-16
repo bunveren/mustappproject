@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinter.scrolledtext import ScrolledText
@@ -11,13 +10,13 @@ import time
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import concurrent.futures  # Import for thread pool
+import concurrent.futures
 
-MAX_IMAGE_WIDTH = 150
-MAX_IMAGE_HEIGHT = 200
+MAX_IMAGE_WIDTH = 300
+MAX_IMAGE_HEIGHT = 500
 num_movies_found = 0
 image_frames = []
-image_loading_thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4) # Thread pool for image loading
+image_loading_thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=12)
 
 def get_user_want_to_watch_movies_from_webpage(username):
     url = f"https://mustapp.com/@{username}/want"
@@ -71,7 +70,6 @@ def on_search_button_click():
         return
 
     search_button.config(state=tk.DISABLED)
-    text_result.delete(1.0, tk.END)
     clear_image_frames()
     progress_bar.start()
     status_var.set("Searching...")
@@ -120,7 +118,7 @@ def process_movie_queue(movie_queue):
         movie = movie_queue.get()
         if movie is None:
             break
-        add_movie_display_threaded(movie, index) # Call the threaded version
+        add_movie_display_threaded(movie, index)
         index += 1
     root.after(0, lambda: status_var.set(f"Display complete. {num_movies_found} movies displayed."))
 
@@ -138,7 +136,6 @@ def add_movie_display_threaded(movie, index):
     label_title = tk.Label(frame, text=movie['title'], font=("Arial", 12), wraplength=MAX_IMAGE_WIDTH)
     label_title.pack()
 
-    # Submit image loading task to thread pool
     image_loading_thread_pool.submit(load_image_threaded, movie, frame)
 
 def load_image_threaded(movie, frame):
@@ -149,9 +146,7 @@ def load_image_threaded(movie, frame):
         image_data = io.BytesIO(response.content)
         img = Image.open(image_data)
         img.thumbnail((MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT), Image.LANCZOS)
-        photo = ImageTk.PhotoImage(img) # PhotoImage must be created in main thread
-
-        # Schedule GUI update in the main thread
+        photo = ImageTk.PhotoImage(img)
         root.after(0, lambda: display_image(frame, photo))
 
     except requests.exceptions.RequestException as e:
@@ -163,7 +158,7 @@ def load_image_threaded(movie, frame):
 
 def display_image(frame, photo):
     label_image = tk.Label(frame, image=photo)
-    label_image.image = photo # Keep a reference!
+    label_image.image = photo
     label_image.pack()
 
 def display_error_image(frame, error_message):
@@ -187,7 +182,6 @@ if __name__ == "__main__":
     root.rowconfigure(1, weight=0)
     root.rowconfigure(2, weight=1)
     root.rowconfigure(3, weight=0)
-    root.rowconfigure(4, weight=1)
 
     label_username = tk.Label(root, text="Enter Username:", font=("Arial", 12))
     label_username.grid(row=0, column=0, padx=10, pady=10, sticky="e")
@@ -210,6 +204,8 @@ if __name__ == "__main__":
 
     scrollbar = ttk.Scrollbar(image_frame, orient="horizontal", command=canvas.xview)
     scrollbar.pack(side="bottom", fill="x")
+    style = ttk.Style()
+    style.configure("Horizontal.TScrollbar", sliderthickness=20)
 
     canvas.configure(xscrollcommand=scrollbar.set)
 
@@ -222,8 +218,5 @@ if __name__ == "__main__":
     status_bar = tk.Label(root, textvariable=status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W)
     status_bar.grid(row=3, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
     status_var.set("Ready")
-
-    text_result = ScrolledText(root, wrap=tk.WORD, width=80, height=10, font=("Courier New", 10))
-    text_result.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
 
     root.mainloop()
